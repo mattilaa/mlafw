@@ -1,2 +1,2 @@
-# mlatimer
-Simple header-only timer library
+# mlafw
+Simple header-only event framework library
