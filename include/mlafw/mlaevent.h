@@ -1,71 +1,134 @@
 #ifndef __MLA_EVENT_H__
 #define __MLA_EVENT_H__
 
-#include <assert.h>
-#include <map>
-#include <typeindex>
+#include "mlafw/detail/mlaeventdetail.h"
+
+#include <variant>
 
 namespace mla::event {
 
-class EventBase
+template<typename EventType>
+class BlockingEventQueue
 {
 public:
-    virtual ~EventBase() = default;
-};
+    virtual ~BlockingEventQueue() = default;
 
-namespace details {
+    virtual auto processEvent(const EventType& evt) -> void = 0;
 
-class Dispatcher
-{
-public:
-    virtual ~Dispatcher() = default;
-
-private:
-    friend class SubBase;
-    virtual auto doDispatch(const EventBase& evt) -> void = 0;
-    auto innerDispatch(const EventBase& evt) -> void { doDispatch(evt); }
-};
-
-class SubBase
-{
-    std::map<std::type_index, Dispatcher*> handlers;
-public:
-    virtual ~SubBase() = default;
-
-    template<typename E>
-    auto dispatch(const E& evt) -> void
+    void push(EventType&& evt)
     {
-        auto id = std::type_index(typeid(evt));
-        if(auto it = handlers.find(id); it != handlers.end())
-            it->second->innerDispatch(evt);
-        else // \todo what here? now just assert
-            assert(false);
+        _q.enqueue(std::move(evt));
+    }
+
+    bool isLockFree() const { return _q.is_lock_free(); }
+
+    void eventLoop()
+    {
+        _isRunning.store(true);
+
+        while (true)
+        {
+            EventType evt;
+            _q.wait_dequeue(evt);
+            processEvent(evt);
+
+            if (__MLA_UNLIKELY(!_isRunning.load()))
+                break;
+        }
+    }
+
+    void breakEventLoop()
+    {
+        _isRunning.store(false);
+
+        // Enqueue a dump object just to make event loop exit.
+        // \todo fix this
+        _q.enqueue(EventType {});
     }
 
 protected:
-    auto addHandler(const std::type_index& info, Dispatcher* sub) -> void
+    moodycamel::BlockingConcurrentQueue<
+        EventType,
+        moodycamel::ConcurrentQueueDefaultTraits> _q {kDefaultQueueSize};
+
+    std::atomic_bool _isRunning = ATOMIC_VAR_INIT(false);
+};
+
+
+template<typename EventType>
+class BlockingEventHandlerQueue : public BlockingEventQueue<EventType>
+{
+    std::vector<detail::Dispatcher*> handlers;
+public:
+    auto addHandler(detail::Dispatcher* sub) -> void
     {
-        handlers[info] = sub;
+        handlers.push_back(sub);
+    }
+
+    virtual auto processEvent(const EventType& evt) -> void
+    {
+        for(const auto& handler : handlers)
+        {
+            if(handler->hasHandler(evt))
+            {
+                handler->innerDispatch(evt);
+                break;
+            }
+        }
     }
 };
 
-} // namespace details
-
-template<typename EventType>
-class Sub : public details::Dispatcher, virtual public details::SubBase
+template<typename Visitor, typename Variant>
+class BlockingVariantQueue : public BlockingEventQueue<Variant>
 {
 public:
-    virtual ~Sub() = default;
+    BlockingVariantQueue() = default;
 
-    Sub() { addHandler(std::type_index(typeid(EventType)), this); }
-
-    virtual auto doDispatch(const EventBase& evt) -> void override
+    virtual auto processEvent(const Variant& evt) -> void
     {
-        auto e = static_cast<const EventType&>(evt);
-        onEvent(e);
+        std::visit(static_cast<Visitor&>(*this), evt);
+    }
+};
+
+template<typename EventType>
+class Handler :
+    public detail::Dispatcher,
+    virtual public BlockingEventHandlerQueue<EventBasePtr>
+{
+public:
+    virtual ~Handler() = default;
+
+    Handler() { addHandler(this); }
+
+    auto hasHandler(EventBasePtr evt) const -> bool override
+    {
+        auto e = std::dynamic_pointer_cast<EventType>(evt);
+        return e != nullptr;
+    }
+
+    auto doDispatch(EventBasePtr evt) -> void override
+    {
+        auto e = std::dynamic_pointer_cast<EventType>(evt);
+        onEvent(*e);
     }
 
     virtual auto onEvent(const EventType& evt) -> void = 0;
+};
+
+template<typename Event>
+class VariantHandler :
+    public detail::Dispatcher,
+    public BlockingEventQueue<Event>
+{
+public:
+    virtual ~VariantHandler() = default;
+
+    virtual auto processEvent(const Event& evt) -> void override
+    {
+        // std::visit(&v, evt);
+    }
+
+    // Visitor v;
 };
 
 } // namespace mla::event

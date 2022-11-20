@@ -3,6 +3,9 @@
 
 #include "mladefs.h"
 #include "mlacommon.h"
+#include "mlafw/mlaeventthread.h"
+#include "mlafw/mlalog.h"
+#include "mlafw/mlathread.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -37,7 +40,7 @@ struct Order
     auto operator<(const Order& rhs) const -> bool { return rhs.last < last; }
 };
 
-class MlaTimer
+class MlaTimer : public thread::Thread
 {
     std::priority_queue<Order> _queue;
     std::mutex _mutex;
@@ -51,8 +54,11 @@ public:
         return &instance;
     }
 
-    auto run() -> void
+    virtual ~MlaTimer() = default;
+
+    auto execute() -> void override
     {
+        _running = true;
         while(true)
         {
             std::unique_lock<std::mutex> lock {_mutex};
@@ -97,7 +103,7 @@ public:
         }
     }
 
-    auto exit() -> void
+    auto exit() -> void override
     {
         _running = false;
         _cv.notify_one();
@@ -130,6 +136,7 @@ inline auto order(receiver_type cb, std::uint64_t duration) -> unsigned
 {
     return MlaTimer::instance()->order(cb, duration);
 }
+
 
 } // namespace mla::timer
 

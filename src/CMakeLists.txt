@@ -23,5 +23,6 @@ add_library(mlafw
 target_include_directories(mlafw PUBLIC
     "${MlaFw_SOURCE_DIR}/include"
     "${MlaFw_SOURCE_DIR}/external"
+    "${concurrentqueue_SOURCE_DIR}"
     )
 

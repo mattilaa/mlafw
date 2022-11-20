@@ -6,7 +6,11 @@ struct A : mla::event::EventBase {};
 struct B : A {};
 struct C : B {};
 
-struct Handler : mla::event::Sub<A>, mla::event::Sub<B>, mla::event::Sub<C> {
+struct Handler :
+    mla::event::Handler<A>,
+    mla::event::Handler<B>,
+    mla::event::Handler<C>
+{
     void onEvent(const A&) override { aHandled = true; }
     void onEvent(const B&) override { bHandled = true; }
     void onEvent(const C&) override { cHandled = true; }
@@ -24,16 +28,16 @@ TEST(EventTestSuite, DispatchTest)
 
     Handler handler;
 
-    handler.dispatch(A{});
+    handler.processEvent(std::make_shared<A>());
     EXPECT_TRUE(handler.aHandled && !handler.bHandled && !handler.cHandled);
 
     handler.reset();
 
-    handler.dispatch(B{});
+    handler.processEvent(std::make_shared<B>());
     EXPECT_TRUE(!handler.aHandled && handler.bHandled && !handler.cHandled);
 
     handler.reset();
 
-    handler.dispatch(C{});
+    handler.processEvent(std::make_shared<C>());
     EXPECT_TRUE(!handler.aHandled && !handler.bHandled && handler.cHandled);
 }

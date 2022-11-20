@@ -7,33 +7,61 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Add warning and optimization (-O2) flags for debug and release builds
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O2")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
-# Add unit test files here
 add_executable(tests
     tests.cpp
     )
 
-# Add benchmark files here
-add_executable(benchmark
-    benchmark.cpp
-    )
-
-# Add library dependencies for benchmark here
-target_link_libraries(benchmark
-    mlafw
-    benchmark::benchmark
-    )
-
-# Add library dependencies for unit tests here
 target_link_libraries(tests
     mlafw
     gtest
     gtest_main
     pthread
+    )
+
+add_executable(logtests
+    logtest.cpp
+    )
+
+target_link_libraries(logtests
+    mlafw
+    gtest
+    gtest_main
+    pthread
+    )
+
+add_executable(eventthreadtest
+    eventthreadtest.cpp
+    )
+
+target_link_libraries(eventthreadtest
+    mlafw
+    gtest
+    gtest_main
+    pthread
+    )
+
+add_executable(timertest
+    timertest.cpp
+    )
+
+target_link_libraries(timertest
+    mlafw
+    gtest
+    gtest_main
+    pthread
+    )
+
+add_executable(benchmark
+    benchmark.cpp
+    )
+
+target_link_libraries(benchmark
+    mlafw
+    benchmark::benchmark
     )
 
 # Add unit test files here
@@ -47,4 +75,19 @@ target_link_libraries(eventtest
     gtest_main
     pthread
     )
+
+add_test(
+  NAME eventtest
+  COMMAND $<TARGET_FILE:eventtest>
+  )
+
+add_test(
+  NAME eventthreadtest
+  COMMAND $<TARGET_FILE:eventthreadtest>
+  )
+
+add_test(
+  NAME timestamp
+  COMMAND $<TARGET_FILE:timertest>
+  )
 

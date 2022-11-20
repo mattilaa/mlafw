@@ -2,6 +2,7 @@
 #define __MLA_THREAD_H__
 
 #include <thread>
+#include <assert.h>
 
 namespace mla::thread {
 
@@ -10,10 +11,11 @@ class Thread
 {
     std::unique_ptr<std::thread> _thread;
 public:
-    virtual ~Thread() = default;
+    virtual ~Thread() { assert(!_thread->joinable()); }
 
     // Starts the thread and runs execute function.
-    virtual auto start() -> void { _thread = std::make_unique<std::thread>(&Thread::execute, this); }
+    virtual auto start() -> void
+    { _thread = std::make_unique<std::thread>(&Thread::execute, this); }
 
     // Joins the thread.
     //

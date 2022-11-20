@@ -3,14 +3,15 @@
 
 #include "mladefs.h"
 #include "mlathread.h"
+#include "mlaevent.h"
 
-#include "concurrentqueue/blockingconcurrentqueue.h"
+#include "blockingconcurrentqueue.h"
 
 namespace mla::thread {
 
 static constexpr int kDefaultQueueSize = 10000;
 
-template<typename EventType, typename VisitorType = void>
+template<typename EventType>
 class BlockingEventQueue
 {
 public:
@@ -22,7 +23,7 @@ public:
 
     void push(EventType&& event);
 
-    bool isLockFree() const { return _q.is_lock_free(); }
+    auto isLockFree() -> bool { return _q.is_lock_free(); }
 
     void eventLoop();
 
@@ -36,7 +37,7 @@ protected:
     std::atomic_bool _isRunning = ATOMIC_VAR_INIT(false);
 };
 
-template<typename EventType, typename VisitorType>
+template<typename EventType>
 class MlaEventThread :
     public mla::thread::Thread,
     public BlockingEventQueue<EventType>
@@ -44,39 +45,33 @@ class MlaEventThread :
 public:
     virtual ~MlaEventThread() = default;
 
-    virtual auto execute() -> void override
+    virtual void execute() override
     {
         BlockingEventQueue<EventType>::eventLoop();
     }
 
-    virtual void processEvent(const EventType& event) override
-    {
-    }
-
-    virtual auto exit() -> void override
+    virtual void exit() override
     {
         BlockingEventQueue<EventType>::breakEventLoop();
     }
-
-    VisitorType visitor;
 };
 
 // BlockingEventQueue implementation
-template<typename EventType, typename VisitorType>
-void BlockingEventQueue<EventType, VisitorType>::push(EventType& event)
+template<typename EventType>
+void BlockingEventQueue<EventType>::push(EventType& event)
 {
     /// \todo remove
     push(std::move(event));
 }
 
-template<typename EventType, typename VisitorType>
-void BlockingEventQueue<EventType, VisitorType>::push(EventType&& event)
+template<typename EventType>
+void BlockingEventQueue<EventType>::push(EventType&& event)
 {
     _q.enqueue(std::move(event));
 }
 
-template<typename EventType, typename VisitorType>
-void BlockingEventQueue<EventType, VisitorType>::eventLoop()
+template<typename EventType>
+void BlockingEventQueue<EventType>::eventLoop()
 {
     _isRunning.store(true);
 
@@ -91,12 +86,13 @@ void BlockingEventQueue<EventType, VisitorType>::eventLoop()
     }
 }
 
-template<typename EventType, typename VisitorType>
-void BlockingEventQueue<EventType, VisitorType>::breakEventLoop()
+template<typename EventType>
+void BlockingEventQueue<EventType>::breakEventLoop()
 {
     _isRunning.store(false);
 
     // Enqueue a dump object just to make event loop exit.
+    // \todo fix this
     _q.enqueue(EventType{});
 }
 
