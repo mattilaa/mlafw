@@ -1,6 +1,18 @@
-# Find dependencies
-find_package(benchmark REQUIRED)
-find_package(GTest REQUIRED)
+# Fetch googletest
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        58d77fa8070e8cec2dc1ed015d66b454c8d78850
+)
+FetchContent_MakeAvailable(googletest)
+
+# Fetch google benchmark
+FetchContent_Declare(
+    benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG        d572f4777349d43653b21d6c2fc63020ab326db2
+)
+FetchContent_MakeAvailable(benchmark)
 
 # Make 'release' as default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -17,8 +29,7 @@ add_executable(tests
 
 target_link_libraries(tests
     mlafw
-    gtest
-    gtest_main
+    GTest::gtest_main
     pthread
     )
 
@@ -28,8 +39,7 @@ add_executable(logtests
 
 target_link_libraries(logtests
     mlafw
-    gtest
-    gtest_main
+    GTest::gtest_main
     pthread
     )
 
@@ -39,8 +49,7 @@ add_executable(eventthreadtest
 
 target_link_libraries(eventthreadtest
     mlafw
-    gtest
-    gtest_main
+    GTest::gtest_main
     pthread
     )
 
@@ -50,16 +59,15 @@ add_executable(timertest
 
 target_link_libraries(timertest
     mlafw
-    gtest
-    gtest_main
+    GTest::gtest_main
     pthread
     )
 
-add_executable(benchmark
+add_executable(benchmarks
     benchmark.cpp
     )
 
-target_link_libraries(benchmark
+target_link_libraries(benchmarks
     mlafw
     benchmark::benchmark
     )
@@ -71,8 +79,7 @@ add_executable(eventtest
 
 target_link_libraries(eventtest
     mlafw
-    gtest
-    gtest_main
+    GTest::gtest_main
     pthread
     )
 
@@ -87,7 +94,7 @@ add_test(
   )
 
 add_test(
-  NAME timestamp
+  NAME timertest
   COMMAND $<TARGET_FILE:timertest>
   )
 
