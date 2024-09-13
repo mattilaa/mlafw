@@ -30,16 +30,16 @@ struct TimerTester :
     {
         --count;
         ++total;
-        LOG(LOG, "Recv event: " << client << " count: " << total);
+        LOG_INFO(LOG, "Recv event: " << client << " count: " << total);
         if (count > 0)
             orderTimer();
         else
-            LOG(LOG, "Timer total: " << total << " client: " << client);
+            LOG_INFO(LOG, "Timer total: " << total << " client: " << client);
     }
 
     void execute() override
     {
-        LOG(LOG, "Client started: " << client);
+        LOG_INFO(LOG, "Client started: " << client);
         orderTimer();
         thread::MlaEventThread<TimerEvent>::execute();
     }
@@ -49,7 +49,7 @@ struct TimerTester :
         timer::order(this, interval);
     }
 
-    log::StdOutLogger LOG = log::StdOutLogger("TimerServiceTests");
+    log::StdLogger LOG = log::StdLogger("TimerServiceTests");
 
     int client = 0;
     int interval = 0;

@@ -10,7 +10,8 @@ struct LogThread : mla::thread::Thread
         {
             std::stringstream ss;
             ss << "Log entry no: " << i << ", hello from thread id: " << getId();
-            LOG(log, "Hello! " << ss.str());
+            LOG_INFO(log, "str: " << ss.str());
+            LOG_INFO(log, "int " << 6);
         }
     }
 
@@ -18,25 +19,33 @@ struct LogThread : mla::thread::Thread
     {
     }
 
-    mla::log::StdOutLogger log{"LogThread", true};
+    mla::log::StdLogger log{"LogThread", true};
 };
 
 TEST(LogTests, InfoLogTest)
 {
-    mla::log::StdOutLogger log {"TestLog"};
+    mla::log::StdLogger log {"TestLog"};
     std::stringstream ss;
     ss << "Hello" << ", world!";
-    log.log(ss.str().c_str());
+    log.log(mla::log::LogLevel::INFO, ss.str().c_str());
 }
 
 TEST(LogTests, InfoLogTestColor)
 {
-    mla::log::StdOutLogger log {"TestLog", true};
+    mla::log::StdLogger log {"TestLog", true};
     std::stringstream ss;
     ss << "Hello" << ", world!";
-    log.log(ss.str());
+    log.log(mla::log::LogLevel::INFO, ss.str().c_str());
 }
 
+TEST(LogTests, LogLevelTests)
+{
+    mla::log::StdLogger log {"TestLog", true};
+    LOG_INFO(log, "Hello I'm LOG_INFO: " << 2.3 << ", 😍");
+    LOG_WARNING(log, "Hello I'm LOG_WARNING: " << true<< ", 😱");
+    LOG_ERROR(log, "Hello I'm LOG_ERROR: 😭");
+    LOG_DEBUG(log, "Hello I'm LOG_DEBUG: 🦗");
+}
 TEST(LogTests, ThreadTest)
 {
     LogThread t1, t2, t3, t4;
@@ -54,8 +63,8 @@ TEST(LogTests, ThreadTest)
 
 TEST(LogTests, ContextTest)
 {
-    mla::log::StdOutLogger log1 {"MyLog"};
-    mla::log::StdOutLogger log5 {log1, "SubLog"};
-    LOG(log5, "Hey");
+    mla::log::StdLogger log1 {"MyLog"};
+    mla::log::StdLogger log5 {log1, "SubLog"};
+    LOG_INFO(log5, "Hey");
 }
 

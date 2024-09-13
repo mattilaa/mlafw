@@ -14,7 +14,7 @@ struct Event : mla::event::EventBase {};
 struct SomeEvent : Event {};
 struct SomeOtherEvent : Event {};
 struct BreakEventLoop : Event {};
-using mla::log::StdOutLogger;
+using mla::log::StdLogger;
 
 struct EventThread :
     public mla::thread::Thread,
@@ -24,22 +24,22 @@ struct EventThread :
 {
     auto onEvent(const BreakEventLoop&) -> void override
     {
-        LOG(StdOutLogger(), "Breaking up event loop in 0.5 secs...");
+        LOG_INFO(StdLogger(), "Breaking up event loop in 0.5 secs...");
         usleep(500000);
         breakEventLoop();
-        LOG(StdOutLogger(), "Done...");
+        LOG_INFO(StdLogger(), "Done...");
     }
 
     auto onEvent(const SomeEvent&) -> void override
     {
-        LOG(StdOutLogger(), "Hola from SomeEvent handler!");
+        LOG_INFO(StdLogger(), "Hola from SomeEvent handler!");
         usleep(400000);
         someEventHandled = true;
     }
 
     auto onEvent(const SomeOtherEvent&) -> void override
     {
-        LOG(StdOutLogger(), "Hola from SomeOtherEvent handler!");
+        LOG_INFO(StdLogger(), "Hola from SomeOtherEvent handler!");
         usleep(200000);
         someOtherEventHandled = true;
     }
@@ -90,22 +90,22 @@ struct VariantEventThread :
 
     auto operator()(const SomeEvent&) -> void
     {
-        LOG(StdOutLogger(), "Hola from SomeEvent handler!");
+        LOG_INFO(StdLogger(), "Hola from SomeEvent handler!");
         std::this_thread::sleep_for(0.5s);
     }
 
     auto operator()(const SomeOtherEvent&) -> void
     {
-        LOG(StdOutLogger(), "Hola from SomeOtherEvent handler!");
+        LOG_INFO(StdLogger(), "Hola from SomeOtherEvent handler!");
         std::this_thread::sleep_for(0.5s);
     }
 
     auto operator()(const BreakEventLoop&) -> void
     {
-        LOG(StdOutLogger(), "Breaking up event loop in 0.5 secs...");
+        LOG_INFO(StdLogger(), "Breaking up event loop in 0.5 secs...");
         std::this_thread::sleep_for(0.5s);
         breakEventLoop();
-        LOG(StdOutLogger(), "Done...");
+        LOG_INFO(StdLogger(), "Done...");
     }
 };
 

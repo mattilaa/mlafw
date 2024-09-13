@@ -2,79 +2,135 @@
 #define __MLA_LOG_H__
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string_view>
 
-#define LOG(l, x)                                                              \
-    {                                                                          \
-        std::stringstream ___ss;                                               \
-        ___ss << x;                                                            \
-        l.log(___ss.str().c_str());                                            \
-    }
+namespace mla::log
+{
 
-namespace mla::log {
+enum class LogLevel
+{
+    INFO,
+    WARNING,
+    ERROR,
+    DEBUG
+};
 
 class Logger
 {
-    static constexpr unsigned kBufLength = 13;
 public:
     virtual ~Logger() = default;
 
-    virtual auto log(const std::string& msg) -> void = 0;
+    virtual void log(LogLevel level, const std::string& msg) = 0;
 
-    virtual auto log(const char* msg) -> void = 0;
-
-    static auto timestamp() -> std::string
+    static std::string timestamp()
     {
-        namespace c = std::chrono;
-        c::system_clock::time_point tp = c::system_clock::now();
-        std::time_t tt = c::system_clock::to_time_t(tp);
-        std::tm gmt;
-        gmtime_r(&tt, &gmt);
-        c::duration<double> frac = (tp - c::system_clock::from_time_t(tt))
-                                   + c::seconds(gmt.tm_sec);
-        std::string buffer {"", kBufLength};
-        sprintf(&buffer.front(),
-                "%02d:%02d:%09.6f",
-                gmt.tm_hour,
-                gmt.tm_min,
-                frac.count());
-        return buffer;
+        auto now = std::chrono::system_clock::now();
+        auto time = std::chrono::floor<std::chrono::microseconds>(now);
+        auto ms = std::chrono::duration_cast<std::chrono::microseconds>(
+                    time.time_since_epoch())
+                    .count() %
+                  1000000;
+
+        std::time_t tt = std::chrono::system_clock::to_time_t(now);
+        std::tm tm = *std::localtime(&tt);
+
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "%H:%M:%S") << '.' << std::setfill('0')
+            << std::setw(6) << ms;
+        return oss.str();
     }
 };
 
-class StdOutLogger : public Logger
+class StdLogger : public Logger
 {
-    std::string ctx;
-    bool isColor;
 public:
-    StdOutLogger(const char* ctx = "", bool isColor = false) :
-        ctx(ctx), isColor(isColor)
-    {}
-
-    StdOutLogger(const StdOutLogger& log, const char* ctx) :
-        ctx(std::string(log.ctx + "/") + ctx),
-        isColor(log.isColor)
-    {}
-
-    auto log(const std::string& msg) -> void override
+    StdLogger(std::string_view ctx = "", bool use_color = false)
+      : ctx(ctx), use_color(use_color)
     {
-        log(msg.c_str());
     }
 
-    auto log(const char* msg) -> void override
+    StdLogger(const StdLogger& log, std::string_view new_ctx)
+      : ctx(log.ctx.empty() ? std::string(new_ctx)
+                            : log.ctx + "/" + std::string(new_ctx)),
+        use_color(log.use_color)
     {
-        std::stringstream ss;
-        if(isColor)
-            ss << "\x1b[32;1m[INFO]\x1b[0m ";
-        else
-            ss << "[INFO] ";
-        ss << timestamp() << " " << ctx << (ctx.empty() ? "" : " ") << msg
-           << "\n";
+    }
+
+    void log(LogLevel level, const std::string& msg) override
+    {
+        std::string level_str;
+        std::string color_code;
+
+        switch(level)
+        {
+            case LogLevel::INFO:
+                level_str = "INFO";
+                color_code = "\x1b[32;1m";
+                break;
+            case LogLevel::WARNING:
+                level_str = "WARNING";
+                color_code = "\x1b[33;1m";
+                break;
+            case LogLevel::ERROR:
+                level_str = "ERROR";
+                color_code = "\x1b[31;1m";
+                break;
+            case LogLevel::DEBUG:
+                level_str = "DEBUG";
+                color_code = "\x1b[36;1m";
+                break;
+        }
+
+        std::ostringstream ss;
+        ss << (use_color ? color_code : "") << level_str
+           << (use_color ? "\x1b[0m" : "") << " " << timestamp() << " "
+           << (ctx.empty() ? "" : ctx + " ") << msg
+           << (use_color ? "\x1b[0m" : "") << std::endl;
+
+        // Using a single cout call to ensure atomicity
         std::cout << ss.str();
     }
+
+private:
+    std::string ctx;
+    bool use_color;
 };
 
-} // namespace mla::log
+}  // namespace mla::log
 
-#endif
+#define LOG_INFO(logger, ...)                            \
+    do                                                   \
+    {                                                    \
+        std::ostringstream ss_;                          \
+        ss_ << __VA_ARGS__;                              \
+        logger.log(mla::log::LogLevel::INFO, ss_.str()); \
+    } while(0)
+
+#define LOG_DEBUG(logger, ...)                            \
+    do                                                    \
+    {                                                     \
+        std::ostringstream ss_;                           \
+        ss_ << __VA_ARGS__;                               \
+        logger.log(mla::log::LogLevel::DEBUG, ss_.str()); \
+    } while(0)
+
+#define LOG_WARNING(logger, ...)                            \
+    do                                                      \
+    {                                                       \
+        std::ostringstream ss_;                             \
+        ss_ << __VA_ARGS__;                                 \
+        logger.log(mla::log::LogLevel::WARNING, ss_.str()); \
+    } while(0)
+
+#define LOG_ERROR(logger, ...)                            \
+    do                                                    \
+    {                                                     \
+        std::ostringstream ss_;                           \
+        ss_ << __VA_ARGS__;                               \
+        logger.log(mla::log::LogLevel::ERROR, ss_.str()); \
+    } while(0)
+
+#endif  // __MLA_LOG_H__
