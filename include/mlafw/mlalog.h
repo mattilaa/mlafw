@@ -18,12 +18,52 @@ enum class LogLevel
     DEBUG
 };
 
-class Logger
+static std::ostream& operator<<(std::ostream& oss, LogLevel level)
+{
+    switch(level)
+    {
+        case LogLevel::INFO:
+            return oss << "INFO";
+        case LogLevel::WARNING:
+            return oss << "WARNING";
+        case LogLevel::ERROR:
+            return oss << "ERROR";
+        case LogLevel::DEBUG:
+            return oss << "DEBUG";
+    }
+    return oss; // Because of some stupid compilers
+}
+
+static std::string toColor(LogLevel level)
+{
+    switch(level)
+    {
+        case LogLevel::INFO:
+            return "\x1b[32;1m";
+        case LogLevel::WARNING:
+            return "\x1b[33;1m";
+        case LogLevel::ERROR:
+            return "\x1b[31;1m";
+        case LogLevel::DEBUG:
+            return "\x1b[36;1m";
+    }
+    return ""; // Because of some stupid compilers
+}
+
+class StdLogger
 {
 public:
-    virtual ~Logger() = default;
+    StdLogger(std::string_view ctx = "", bool use_color = false)
+      : ctx(ctx), use_color(use_color)
+    {
+    }
 
-    virtual void log(LogLevel level, const std::string& msg) = 0;
+    StdLogger(const StdLogger& log, std::string_view new_ctx)
+      : ctx(log.ctx.empty() ? std::string(new_ctx)
+                            : log.ctx + "/" + std::string(new_ctx)),
+        use_color(log.use_color)
+    {
+    }
 
     static std::string timestamp()
     {
@@ -42,55 +82,14 @@ public:
             << std::setw(6) << ms;
         return oss.str();
     }
-};
 
-class StdLogger : public Logger
-{
-public:
-    StdLogger(std::string_view ctx = "", bool use_color = false)
-      : ctx(ctx), use_color(use_color)
+    void log(LogLevel level, std::string_view msg)
     {
-    }
-
-    StdLogger(const StdLogger& log, std::string_view new_ctx)
-      : ctx(log.ctx.empty() ? std::string(new_ctx)
-                            : log.ctx + "/" + std::string(new_ctx)),
-        use_color(log.use_color)
-    {
-    }
-
-    void log(LogLevel level, const std::string& msg) override
-    {
-        std::string level_str;
-        std::string color_code;
-
-        switch(level)
-        {
-            case LogLevel::INFO:
-                level_str = "INFO";
-                color_code = "\x1b[32;1m";
-                break;
-            case LogLevel::WARNING:
-                level_str = "WARNING";
-                color_code = "\x1b[33;1m";
-                break;
-            case LogLevel::ERROR:
-                level_str = "ERROR";
-                color_code = "\x1b[31;1m";
-                break;
-            case LogLevel::DEBUG:
-                level_str = "DEBUG";
-                color_code = "\x1b[36;1m";
-                break;
-        }
-
         std::ostringstream ss;
-        ss << (use_color ? color_code : "") << level_str
+        ss << (use_color ? toColor(level) : "") << level
            << (use_color ? "\x1b[0m" : "") << " " << timestamp() << " "
            << (ctx.empty() ? "" : ctx + " ") << msg
-           << (use_color ? "\x1b[0m" : "") << std::endl;
-
-        // Using a single cout call to ensure atomicity
+           << (use_color ? "\x1b[0m" : "") << "\n";
         std::cout << ss.str();
     }
 
