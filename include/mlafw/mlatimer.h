@@ -1,7 +1,6 @@
 #ifndef __MLA_TIMER_H__
 #define __MLA_TIMER_H__
 
-#include "mladefs.h"
 #include "mlacommon.h"
 #include "mlafw/mlaeventthread.h"
 #include "mlafw/mlalog.h"
@@ -11,18 +10,21 @@
 #include <condition_variable>
 #include <mutex>
 #include <queue>
+#include <vector>
+#include <atomic>
+#include <unordered_set>
 
 namespace mla::timer {
 
-using clock_type = std::chrono::high_resolution_clock;
-using duration = std::uint64_t;
+using clock_type = std::chrono::steady_clock;
+using duration = std::chrono::milliseconds;
 using timer_id = unsigned;
 
-struct Receiver
+class Receiver
 {
+public:
     virtual ~Receiver() = default;
-
-    virtual auto timeout(timer_id id) -> void = 0;
+    virtual void timeout(timer_id id) = 0;
 };
 
 #ifdef USE_SMART_POINTER_RECEIVER
@@ -34,109 +36,109 @@ using receiver_type = Receiver*;
 struct Order
 {
     receiver_type rcv;
-    clock_type::time_point last;
+    clock_type::time_point expiry;
     timer_id id;
 
-    auto operator<(const Order& rhs) const -> bool { return rhs.last < last; }
+    bool operator>(const Order& rhs) const { return expiry > rhs.expiry; }
 };
 
 class MlaTimer : public thread::Thread
 {
-    std::priority_queue<Order> _queue;
-    std::mutex _mutex;
-    std::condition_variable _cv;
-    bool _running = false;
-
 public:
-    [[nodiscard]] static auto instance() -> MlaTimer*
+    static MlaTimer* instance()
     {
         static MlaTimer instance;
         return &instance;
     }
 
-    virtual ~MlaTimer() = default;
+    ~MlaTimer() = default;
 
-    auto execute() -> void override
+    void execute() override
     {
-        _running = true;
-        while(true)
+        [[likely]] while(_running)
         {
-            std::unique_lock<std::mutex> lock {_mutex};
+            std::unique_lock<std::mutex> lock{_mutex};
 
-            while(_queue.empty() && _running)
-                _cv.wait(lock);
-
-            if(__MLA_UNLIKELY(!_running))
-                break;
-
-            const auto timer = _queue.top();
-            const auto now = clock_type::now();
-            const auto expire = timer.last;
-
-            bool handled = false;
-
-            if(__MLA_LIKELY(expire > now))
+            if(_queue.empty())
             {
-                const auto timeout = expire - now;
-                std::cv_status s = _cv.wait_for(lock, timeout);
-                handled = s == std::cv_status::timeout;
+                _cv.wait(lock, [this] { return !_running || !_queue.empty(); });
+                [[unlikely]] if(!_running)
+                    break;
+            }
+
+            auto now = clock_type::now();
+            if(_queue.top().expiry > now)
+            {
+                _cv.wait_until(lock, _queue.top().expiry);
+                continue;
+            }
+
+            auto order = std::move(const_cast<Order&>(_queue.top()));
+            _queue.pop();
+
+            if(_cancelled_timers.find(order.id) == _cancelled_timers.end())
+            {
+#ifdef USE_SMART_POINTER_RECEIVER
+                if(auto receiver = order.rcv.lock())
+#else
+                if(auto receiver = order.rcv)
+#endif
+                {
+                    receiver->timeout(order.id);
+                }
             }
             else
             {
-                handled = true;
-            }
-
-            if(handled)
-            {
-                _queue.pop();
-
-#ifdef USE_SMART_POINTER_RECEIVER
-                if(auto ptr = timer.rcv.lock())
-#else
-                if(auto ptr = timer.rcv)
-#endif
-                {
-                    auto t {timer.id};
-                    ptr->timeout(t);
-                }
+                _cancelled_timers.erase(order.id);
             }
         }
     }
 
-    auto exit() -> void override
+    void exit() override
     {
         _running = false;
         _cv.notify_one();
     }
 
-    auto order(receiver_type cb, std::uint64_t duration) -> unsigned
+    timer_id order(receiver_type cb, duration timeout_duration)
     {
-        std::lock_guard<std::mutex> lock {_mutex};
+        std::lock_guard<std::mutex> lock{_mutex};
 
-        clock_type::time_point last {
-            clock_type::now() + std::chrono::milliseconds(duration)
-        };
+        auto expiry = clock_type::now() + timeout_duration;
         auto id = mla::Id::getId();
-        _queue.emplace(Order {cb, last, id});
+        _queue.emplace(Order{std::move(cb), expiry, id});
         _cv.notify_one();
 
         return id;
     }
 
-    /*
-    auto cancel(unsigned id, bool handle_timeout = false)
+    bool cancel(timer_id id)
     {
-        // \todo implement
-        std::lock_guard<std::mutex> lock {_mutex};
+        std::lock_guard<std::mutex> lock{_mutex};
+        return _cancelled_timers.insert(id).second;
     }
-    */
+
+private:
+    MlaTimer() = default;
+    MlaTimer(const MlaTimer&) = delete;
+    MlaTimer& operator=(const MlaTimer&) = delete;
+
+    std::priority_queue<Order, std::vector<Order>, std::greater<>> _queue;
+    std::unordered_set<timer_id> _cancelled_timers;
+    std::mutex _mutex;
+    std::condition_variable _cv;
+    std::atomic_bool _running{true};
 };
 
-inline auto order(receiver_type cb, std::uint64_t duration) -> unsigned
+inline timer_id order(receiver_type cb, duration timeout_duration)
 {
-    return MlaTimer::instance()->order(cb, duration);
+    return MlaTimer::instance()->order(std::move(cb), timeout_duration);
 }
 
+inline bool cancel(timer_id id)
+{
+    return MlaTimer::instance()->cancel(id);
+}
 
 } // namespace mla::timer
 

@@ -52,7 +52,7 @@ struct TimerTester :
     log::StdLogger LOG = log::StdLogger("TimerServiceTests");
 
     int client = 0;
-    int interval = 0;
+    std::chrono::milliseconds interval;
     int count = 0;
     int total = 0;
 };
