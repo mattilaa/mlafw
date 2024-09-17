@@ -1,48 +1,64 @@
 #ifndef __MLA_THREAD_H__
 #define __MLA_THREAD_H__
 
+#include <atomic>
+#include <cassert>
 #include <thread>
-#include <assert.h>
 
-namespace mla::thread {
+namespace mla::thread
+{
 
-/// Lightweight thread interface wrapping std::thread object
 class Thread
 {
-    std::unique_ptr<std::thread> _thread;
 public:
-    virtual ~Thread() { assert(!_thread->joinable()); }
+    Thread() = default;
+    virtual ~Thread()
+    {
+        assert(!(_thread && _thread->joinable()));
+    }
 
-    // Starts the thread and runs execute function.
-    virtual auto start() -> void
-    { _thread = std::make_unique<std::thread>(&Thread::execute, this); }
+    // Prevent copying and moving
+    Thread(const Thread&) = delete;
+    Thread& operator=(const Thread&) = delete;
+    Thread(Thread&&) = delete;
+    Thread& operator=(Thread&&) = delete;
 
-    // Joins the thread.
-    //
-    // This should be called after exit is called
-    // and as a last step before the object is destroyed.
-    virtual auto join() -> void { if(_thread->joinable()) _thread->join(); }
+    virtual void start()
+    {
+        [[unlikely]] if(_thread) return;
+        _thread = std::make_unique<std::thread>(&Thread::run, this);
+    }
 
-    // Returns Id of the running thread
-    //
-    // \return Thread id
-    auto getId() const -> std::thread::id { return _thread->get_id(); }
+    virtual void join()
+    {
+        if(_thread && _thread->joinable())
+        {
+            _thread->join();
+        }
+    }
 
-    // Returns native handle of the thread.
-    //
-    // \return Thread handle
-    auto getNativeHandle() const -> std::thread::native_handle_type
-    { return _thread->native_handle(); }
+    [[nodiscard]] std::thread::id getId() const
+    {
+        return _thread ? _thread->get_id() : std::thread::id{};
+    }
 
-    /// Executor function of the worker thread.
-    virtual auto execute() -> void = 0;
+    [[nodiscard]] std::thread::native_handle_type getNativeHandle() const
+    {
+        return _thread ? _thread->native_handle() : nullptr;
+    }
 
-    // Request exit for thread.
-    //
-    // This function should break execution event loop, or clean up the object.
-    virtual auto exit() -> void = 0;
+    virtual void execute() = 0;
+    virtual void exit() = 0;
+
+protected:
+    std::atomic<bool> _shouldExit{false};
+
+private:
+    std::unique_ptr<std::thread> _thread;
+
+    void run() { execute(); }
 };
 
-} // namespace mla::thread
+}  // namespace mla::thread
 
-#endif
+#endif // __MLA_THREAD_H__
