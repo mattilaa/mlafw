@@ -90,7 +90,11 @@ public:
            << (use_color ? "\x1b[0m" : "") << " " << timestamp() << " "
            << (ctx.empty() ? "" : ctx + " ") << msg
            << (use_color ? "\x1b[0m" : "") << "\n";
-        std::cout << ss.str();
+
+        if(level == LogLevel::INFO || level == LogLevel::DEBUG)
+            std::cout << ss.str();
+        else
+            std::cerr << ss.str();
     }
 
 private:
