@@ -44,7 +44,8 @@ public:
 
     [[nodiscard]] std::thread::native_handle_type getNativeHandle() const
     {
-        return _thread ? _thread->native_handle() : nullptr;
+        return _thread ? _thread->native_handle()
+                       : std::thread::native_handle_type{};
     }
 
     virtual void execute() = 0;
