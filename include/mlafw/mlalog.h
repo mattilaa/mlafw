@@ -54,14 +54,14 @@ class StdLogger
 {
 public:
     StdLogger(std::string_view ctx = "", bool use_color = false)
-      : ctx(ctx), use_color(use_color)
+        : ctx(ctx), use_color(use_color)
     {
     }
 
-    StdLogger(const StdLogger& log, std::string_view new_ctx)
-      : ctx(log.ctx.empty() ? std::string(new_ctx)
-                            : log.ctx + "/" + std::string(new_ctx)),
-        use_color(log.use_color)
+    StdLogger(const StdLogger &log, std::string_view new_ctx)
+        : ctx(log.ctx.empty() ? std::string(new_ctx)
+                              : log.ctx + "/" + std::string(new_ctx)),
+          use_color(log.use_color)
     {
     }
 
@@ -70,8 +70,8 @@ public:
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::floor<std::chrono::microseconds>(now);
         auto ms = std::chrono::duration_cast<std::chrono::microseconds>(
-                    time.time_since_epoch())
-                    .count() %
+                      time.time_since_epoch())
+                      .count() %
                   1000000;
 
         std::time_t tt = std::chrono::system_clock::to_time_t(now);
@@ -104,36 +104,36 @@ private:
 
 }  // namespace mla::log
 
-#define LOG_INFO(logger, ...)                            \
-    do                                                   \
-    {                                                    \
-        std::ostringstream ss_;                          \
-        ss_ << __VA_ARGS__;                              \
-        logger.log(mla::log::LogLevel::INFO, ss_.str()); \
+#define LOG_INFO(logger, ...)                                \
+    do                                                       \
+    {                                                        \
+        std::ostringstream ss_;                              \
+        ss_ << __VA_ARGS__;                                  \
+        logger.log(mla::log::LogLevel::INFO, ss_.str());     \
     } while(0)
 
-#define LOG_DEBUG(logger, ...)                            \
-    do                                                    \
-    {                                                     \
-        std::ostringstream ss_;                           \
-        ss_ << __VA_ARGS__;                               \
-        logger.log(mla::log::LogLevel::DEBUG, ss_.str()); \
+#define LOG_DEBUG(logger, ...)                               \
+    do                                                       \
+    {                                                        \
+        std::ostringstream ss_;                              \
+        ss_ << __VA_ARGS__;                                  \
+        logger.log(mla::log::LogLevel::DEBUG, ss_.str());    \
     } while(0)
 
-#define LOG_WARNING(logger, ...)                            \
-    do                                                      \
-    {                                                       \
-        std::ostringstream ss_;                             \
-        ss_ << __VA_ARGS__;                                 \
-        logger.log(mla::log::LogLevel::WARNING, ss_.str()); \
+#define LOG_WARNING(logger, ...)                             \
+    do                                                       \
+    {                                                        \
+        std::ostringstream ss_;                              \
+        ss_ << __VA_ARGS__;                                  \
+        logger.log(mla::log::LogLevel::WARNING, ss_.str());  \
     } while(0)
 
-#define LOG_ERROR(logger, ...)                            \
-    do                                                    \
-    {                                                     \
-        std::ostringstream ss_;                           \
-        ss_ << __VA_ARGS__;                               \
-        logger.log(mla::log::LogLevel::ERROR, ss_.str()); \
+#define LOG_ERROR(logger, ...)                               \
+    do                                                       \
+    {                                                        \
+        std::ostringstream ss_;                              \
+        ss_ << __VA_ARGS__;                                  \
+        logger.log(mla::log::LogLevel::ERROR, ss_.str());    \
     } while(0)
 
 #endif  // __MLA_LOG_H__
