@@ -34,7 +34,7 @@ target_link_libraries(tests
     )
 
 add_executable(utiltest
-    utiltest.cpp
+    attributetupletest.cpp
     )
 
 target_link_libraries(utiltest

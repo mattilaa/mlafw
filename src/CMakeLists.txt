@@ -6,6 +6,7 @@ set(SOURCE_LIST
 
 set(HEADER_LIST
     "${MlaFw_SOURCE_DIR}/include/mlafw/mla.h"
+    "${MlaFw_SOURCE_DIR}/include/mlafw/mlaattributetuple.h"
     "${MlaFw_SOURCE_DIR}/include/mlafw/mlacommon.h"
     "${MlaFw_SOURCE_DIR}/include/mlafw/mladefs.h"
     "${MlaFw_SOURCE_DIR}/include/mlafw/mlaevent.h"
