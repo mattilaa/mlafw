@@ -1,15 +1,13 @@
 #ifndef __MLA_DETAIL_TUPLEUTIL__
 #define __MLA_DETAIL_TUPLEUTIL__
 
-#include <optional>
+#include <sstream>
 #include <tuple>
 #include <type_traits>
 
 namespace detail::util
 {
 
-template <typename... Ts>
-using tuple_type = std::tuple<std::optional<Ts>...>;
 // Type trait to check if T is in Ts...
 template <typename T, typename... Us>
 struct contains_type : std::disjunction<std::is_same<T, Us>...>
@@ -28,6 +26,32 @@ struct find_type_index
                              find_type_index<T, Tuple, I + 1>>>
 {
 };
+
+// General case for printing other types
+template <typename T>
+void print_element(std::ostream& os, const T& t)
+{
+    os << *t;
+}
+
+// Tuple printer implementation
+template <typename Tuple, std::size_t... I>
+void print_tuple_impl(std::ostream& os, const Tuple& t,
+                      std::index_sequence<I...>)
+{
+    os << "(";
+    (..., (os << (I == 0 ? "" : ", "), print_element(os, std::get<I>(t))));
+    os << ")";
+}
+
+// Main function to print tuple
+template <typename... Args>
+std::string print_tuple(const std::tuple<Args...>& t)
+{
+    std::stringstream ss;
+    print_tuple_impl(ss, t, std::index_sequence_for<Args...>{});
+    return ss.str();
+}
 
 } // namespace detail::util
 

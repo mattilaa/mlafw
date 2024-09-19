@@ -4,6 +4,7 @@
 #include "detail/tupleutil.h"
 
 #include <optional>
+#include <ostream>
 #include <tuple>
 #include <utility>
 
@@ -14,6 +15,8 @@ template <typename... Ts>
 class AttributeTuple
 {
 public:
+    using tuple_type = std::tuple<std::optional<Ts>...>;
+
     // Default constructor
     AttributeTuple() = default;
 
@@ -28,8 +31,7 @@ public:
     template <typename... Args>
     void set(Args&&... args)
     {
-        data = std::tuple<std::optional<Ts>...>(
-            std::make_optional<Ts>(std::forward<Args>(args))...);
+        data = tuple_type(std::make_optional<Ts>(std::forward<Args>(args))...);
     }
 
     // Getter for the stored tuple
@@ -43,9 +45,9 @@ public:
     std::optional<T> get() const
     {
         static_assert(detail::util::contains_type<T, Ts...>::value,
-                      "Type not found in tuple");
-        constexpr std::size_t index = detail::util::find_type_index<
-            T, std::tuple<std::optional<Ts>...>>::value;
+                      "Type not found in AttributeTuple");
+        constexpr std::size_t index =
+            detail::util::find_type_index<T, tuple_type>::value;
         return std::get<index>(data);
     }
 
@@ -54,9 +56,9 @@ public:
     void set(const T& value)
     {
         static_assert(detail::util::contains_type<T, Ts...>::value,
-                      "Type not found in tuple");
-        constexpr std::size_t index = detail::util::find_type_index<
-            T, std::tuple<std::optional<Ts>...>>::value;
+                      "Type not found in AttributeTuple");
+        constexpr std::size_t index =
+            detail::util::find_type_index<T, tuple_type>::value;
         std::get<index>(data) = std::make_optional(value);
     }
 
@@ -65,9 +67,9 @@ public:
     void set(T&& value)
     {
         static_assert(detail::util::contains_type<T, Ts...>::value,
-                      "Type not found in tuple");
-        constexpr std::size_t index = detail::util::find_type_index<
-            T, std::tuple<std::optional<Ts>...>>::value;
+                      "Type not found in AttributeTuple");
+        constexpr std::size_t index =
+            detail::util::find_type_index<T, tuple_type>::value;
         std::get<index>(data) = std::make_optional(std::forward<T>(value));
     }
 
@@ -84,14 +86,20 @@ public:
     {
         if constexpr(detail::util::contains_type<T, Ts...>::value)
         {
-            constexpr std::size_t index = detail::util::find_type_index<
-                T, std::tuple<std::optional<Ts>...>>::value;
+            constexpr std::size_t index =
+                detail::util::find_type_index<T, tuple_type>::value;
             return std::get<index>(data).has_value();
         }
         return false;
     }
+
+    // Printer for AttributeTuple
+    friend std::ostream& operator<<(std::ostream& os, const AttributeTuple& tuple)
+    {
+        return os << detail::util::print_tuple(tuple.data);
+    }
 private:
-    std::tuple<std::optional<Ts>...> data;
+    tuple_type data;
 };
 
 } // namespace mla::util

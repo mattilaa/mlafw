@@ -46,6 +46,19 @@ TEST(AttributeTupleTest, ContainsMethod)
     EXPECT_TRUE(TestTuple::contains<std::string>());
     EXPECT_FALSE(TestTuple::contains<double>());
     EXPECT_FALSE(TestTuple::contains<char>());
+
+    AttributeTuple<int, float, std::string> attr;
+    if constexpr(attr.contains<double>())
+    {
+        // Should not ever go here
+        ASSERT_TRUE(false);
+    }
+
+    // Check with static_assert
+    static_assert(attr.contains<int>(), "int should be in the tuple");
+    static_assert(attr.contains<float>(), "float should be in the tuple");
+    static_assert(attr.contains<std::string>(), "string should be in the tuple");
+    static_assert(!attr.contains<double>(), "double should not be in the tuple");
 }
 
 TEST(AttributeTupleTest, HasMethod)
@@ -101,4 +114,14 @@ TEST(AttributeTupleTest, SetEntireTuple)
     EXPECT_EQ(attr.get<int>(), std::optional<int>(100));
     EXPECT_EQ(attr.get<float>(), std::optional<float>(2.718f));
     EXPECT_EQ(attr.get<std::string>(), std::optional<std::string>("World"));
+}
+
+TEST(AttributeTupleTest, PrintTuple)
+{
+    AttributeTuple<int, float, std::string> attr;
+
+    attr.set(100, 2.718f, "World");
+    std::stringstream ss;
+    ss << attr;
+    EXPECT_EQ(ss.str(), "(100, 2.718, World)");
 }
