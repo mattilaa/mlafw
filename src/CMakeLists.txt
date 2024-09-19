@@ -14,6 +14,7 @@ set(HEADER_LIST
     "${MlaFw_SOURCE_DIR}/include/mlafw/mlathread.h"
     "${MlaFw_SOURCE_DIR}/include/mlafw/mlaeventthread.h"
     "${MlaFw_SOURCE_DIR}/include/mlafw/detail/mlaeventdetail.h"
+    "${MlaFw_SOURCE_DIR}/include/mlafw/detail/tupleutil.h"
     )
 
 add_library(mlafw
