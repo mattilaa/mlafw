@@ -33,6 +33,15 @@ target_link_libraries(tests
     pthread
     )
 
+add_executable(utiltest
+    utiltest.cpp
+    )
+
+target_link_libraries(utiltest
+    mlafw
+    GTest::gtest_main
+    )
+
 add_executable(logtests
     logtest.cpp
     )
