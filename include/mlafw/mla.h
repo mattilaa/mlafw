@@ -1,7 +1,6 @@
 #ifndef __MLA_H__
 #define __MLA_H__
 
-#include "mlaapp.h"
 #include "mlaattributetuple.h"
 #include "mlacommon.h"
 #include "mladefs.h"
