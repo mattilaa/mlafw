@@ -81,17 +81,6 @@ target_link_libraries(benchmarks
     benchmark::benchmark
     )
 
-# Add unit test files here
-add_executable(eventtest
-    eventtest.cpp
-    )
-
-target_link_libraries(eventtest
-    mlafw
-    GTest::gtest_main
-    pthread
-    )
-
 add_test(
   NAME eventtest
   COMMAND $<TARGET_FILE:eventtest>

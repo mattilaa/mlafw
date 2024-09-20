@@ -2,7 +2,6 @@
 #include <memory>
 
 #include "mlafw/mla.h"
-#include "mlafw/mlaevent.h"
 #include "mlafw/mlaeventthread.h"
 #include "mlafw/mlalog.h"
 #include "mlafw/mlatimer.h"
@@ -10,10 +9,11 @@
 namespace mla {
 
 struct TimerEvent {};
+using GotTimer = std::variant<TimerEvent>;
 
 struct TimerTester :
     public timer::Receiver,
-    thread::MlaEventThread<TimerEvent>,
+    public thread::EventThread<TimerTester, GotTimer>,
     public std::enable_shared_from_this<TimerTester>
 {
     TimerTester(int client, int interval = 1, int count = 100) :
@@ -23,10 +23,10 @@ struct TimerTester :
 
     void timeout(timer::timer_id) override
     {
-        thread::MlaEventThread<TimerEvent>::push(TimerEvent{});
+        thread::EventThread<TimerTester, GotTimer>::push(GotTimer{});
     }
 
-    void processEvent(const TimerEvent&) override
+    void onEvent(const TimerEvent&)
     {
         --count;
         ++total;
@@ -41,7 +41,7 @@ struct TimerTester :
     {
         LOG_INFO(LOG, "Client started: " << client);
         orderTimer();
-        thread::MlaEventThread<TimerEvent>::execute();
+        thread::EventThread<TimerTester, GotTimer>::execute();
     }
 
     void orderTimer()

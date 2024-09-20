@@ -1,11 +1,11 @@
 #ifndef __MLA_EVENTTHREAD_H__
 #define __MLA_EVENTTHREAD_H__
 
-#include "mladefs.h"
 #include "mlathread.h"
-#include "mlaevent.h"
 
 #include "blockingconcurrentqueue.h"
+
+#include <variant>
 
 namespace mla::thread {
 
@@ -19,11 +19,11 @@ public:
 
     virtual void processEvent(const EventType& event) = 0;
 
-    void push(EventType& event);
+    void push(const EventType& event);
 
     void push(EventType&& event);
 
-    auto isLockFree() -> bool { return _q.is_lock_free(); }
+    auto isLockFree() -> bool { return _queue.is_lock_free(); }
 
     void eventLoop();
 
@@ -32,42 +32,42 @@ public:
 protected:
     moodycamel::BlockingConcurrentQueue<
         EventType,
-        moodycamel::ConcurrentQueueDefaultTraits> _q {kDefaultQueueSize};
+        moodycamel::ConcurrentQueueDefaultTraits> _queue {kDefaultQueueSize};
 
-    std::atomic_bool _isRunning = ATOMIC_VAR_INIT(false);
+    std::atomic_bool _isRunning{false};
 };
 
-template<typename EventType>
-class MlaEventThread :
-    public mla::thread::Thread,
-    public BlockingEventQueue<EventType>
+template <typename Owner, typename EventType>
+class EventThread : public mla::thread::Thread,
+                    public BlockingEventQueue<EventType>
 {
 public:
-    virtual ~MlaEventThread() = default;
+    virtual ~EventThread() = default;
 
-    virtual void execute() override
+    void execute() override
     {
         BlockingEventQueue<EventType>::eventLoop();
     }
 
-    virtual void exit() override
+    void exit() override
     {
         BlockingEventQueue<EventType>::breakEventLoop();
     }
+
+    void processEvent(const EventType& event) override;
 };
 
 // BlockingEventQueue implementation
 template<typename EventType>
-void BlockingEventQueue<EventType>::push(EventType& event)
+void BlockingEventQueue<EventType>::push(const EventType& event)
 {
-    /// \todo remove
-    push(std::move(event));
+    _queue.enqueue(event);
 }
 
 template<typename EventType>
 void BlockingEventQueue<EventType>::push(EventType&& event)
 {
-    _q.enqueue(std::move(event));
+    _queue.enqueue(std::move(event));
 }
 
 template<typename EventType>
@@ -78,10 +78,10 @@ void BlockingEventQueue<EventType>::eventLoop()
     while(true)
     {
         EventType evt;
-        _q.wait_dequeue(evt);
+        _queue.wait_dequeue(evt);
         processEvent(evt);
 
-        if(__MLA_UNLIKELY(!_isRunning.load()))
+        [[unlikely]] if(!_isRunning.load())
             break;
     }
 }
@@ -92,8 +92,15 @@ void BlockingEventQueue<EventType>::breakEventLoop()
     _isRunning.store(false);
 
     // Enqueue a dump object just to make event loop exit.
-    // \todo fix this
-    _q.enqueue(EventType{});
+    // Queue does not support notify.. Maybe fix this later
+    _queue.enqueue(EventType{});
+}
+
+template<typename Owner, typename EventType>
+void EventThread<Owner, EventType>::processEvent(const EventType& event)
+{
+    auto* owner = static_cast<Owner*>(this);
+    std::visit([&](const auto& e) { owner->onEvent(e); }, event);
 }
 
 } // namespace mla::thread

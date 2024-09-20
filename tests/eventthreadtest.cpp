@@ -8,21 +8,17 @@
 
 using namespace std::chrono_literals;
 
-namespace evt = mla::event;
-
-struct Event : mla::event::EventBase {};
-struct SomeEvent : Event {};
-struct SomeOtherEvent : Event {};
-struct BreakEventLoop : Event {};
+struct SomeEvent {};
+struct SomeOtherEvent {};
+struct BreakEventLoop {};
 using mla::log::StdLogger;
 
-struct EventThread :
-    public mla::thread::Thread,
-    evt::Handler<SomeEvent>,
-    evt::Handler<SomeOtherEvent>,
-    evt::Handler<BreakEventLoop>
+using Event = std::variant<SomeEvent, SomeOtherEvent, BreakEventLoop>;
+
+struct TestEventThread :
+    public mla::thread::EventThread<TestEventThread, Event>
 {
-    auto onEvent(const BreakEventLoop&) -> void override
+    auto onEvent(const BreakEventLoop&) -> void
     {
         LOG_INFO(StdLogger(), "Breaking up event loop in 0.5 secs...");
         usleep(500000);
@@ -30,14 +26,14 @@ struct EventThread :
         LOG_INFO(StdLogger(), "Done...");
     }
 
-    auto onEvent(const SomeEvent&) -> void override
+    auto onEvent(const SomeEvent&) -> void
     {
         LOG_INFO(StdLogger(), "Hola from SomeEvent handler!");
         usleep(400000);
         someEventHandled = true;
     }
 
-    auto onEvent(const SomeOtherEvent&) -> void override
+    auto onEvent(const SomeOtherEvent&) -> void
     {
         LOG_INFO(StdLogger(), "Hola from SomeOtherEvent handler!");
         usleep(200000);
@@ -60,63 +56,15 @@ struct EventThread :
 
 TEST(EventThreadTest, OneThread)
 {
-    EventThread th;
+    TestEventThread th{};
     th.start();
 
-    th.push(std::make_shared<SomeEvent>());
-    th.push(std::make_shared<SomeOtherEvent>());
-    th.push(std::make_shared<BreakEventLoop>());
+    th.push(SomeEvent{});
+    th.push(SomeOtherEvent{});
+    th.push(BreakEventLoop{});
     th.join();
 
     EXPECT_TRUE(th.someEventHandled);
     EXPECT_TRUE(th.someOtherEventHandled);
-}
-
-using SomeVariant = std::variant<
-    SomeEvent,
-    SomeOtherEvent,
-    BreakEventLoop>;
-
-struct VariantEventThread :
-    public mla::thread::Thread,
-    evt::BlockingVariantQueue<VariantEventThread, SomeVariant>
-{
-    virtual auto execute() -> void override { eventLoop(); }
-
-    virtual auto exit() -> void override
-    {
-        breakEventLoop();
-    }
-
-    auto operator()(const SomeEvent&) -> void
-    {
-        LOG_INFO(StdLogger(), "Hola from SomeEvent handler!");
-        std::this_thread::sleep_for(0.5s);
-    }
-
-    auto operator()(const SomeOtherEvent&) -> void
-    {
-        LOG_INFO(StdLogger(), "Hola from SomeOtherEvent handler!");
-        std::this_thread::sleep_for(0.5s);
-    }
-
-    auto operator()(const BreakEventLoop&) -> void
-    {
-        LOG_INFO(StdLogger(), "Breaking up event loop in 0.5 secs...");
-        std::this_thread::sleep_for(0.5s);
-        breakEventLoop();
-        LOG_INFO(StdLogger(), "Done...");
-    }
-};
-
-TEST(EventThreadTest, OneThreadVariant)
-{
-    VariantEventThread th;
-    th.start();
-
-    th.push(SomeEvent {});
-    th.push(SomeOtherEvent {});
-    th.push(BreakEventLoop {});
-    th.join();
 }
 
