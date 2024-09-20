@@ -11,6 +11,29 @@
 namespace mla::util
 {
 
+template<typename T, typename Tag = void>
+class Attribute
+{
+public:
+    Attribute() = default;
+    Attribute(T value) : val(std::move(value)) {}
+
+    friend std::ostream& operator<<(std::ostream& os, const Attribute& attr)
+    {
+        if constexpr(requires { { Tag::name() } ->
+                std::convertible_to<std::string_view>; })
+        {
+            os << Tag::name() << ":";
+        }
+        if(attr.val.has_value())
+            os << *attr.val;
+        return os;
+    }
+
+private:
+    std::optional<T> val;
+};
+
 template <typename... Ts>
 class AttributeTuple
 {

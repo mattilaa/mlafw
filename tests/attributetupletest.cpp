@@ -118,10 +118,31 @@ TEST(AttributeTupleTest, SetEntireTuple)
 
 TEST(AttributeTupleTest, PrintTuple)
 {
+    // Test printing for normal values
     AttributeTuple<int, float, std::string> attr;
 
     attr.set(100, 2.718f, "World");
     std::stringstream ss;
     ss << attr;
     EXPECT_EQ(ss.str(), "(100, 2.718, World)");
+}
+
+TEST(AttributeTupleTest, PrintAttributeTuple)
+{
+    // Test tagged attributes
+    struct NameTag { static constexpr std::string_view name() { return "Name"; }; };
+    struct AddressTag { static constexpr std::string_view name() { return "Address"; }; };
+
+    using AttrName = Attribute<std::string, NameTag>;
+    using AttrAddress = Attribute<std::string, AddressTag>;
+    using PoBox = Attribute<std::string>; // no name tag
+    AttrName name{"Joe"};
+    AttrAddress addr{"Oxford Str"};
+    PoBox pbox{"101010"};
+
+    // Test printing for attribute values in tuple
+    AttributeTuple<AttrName, AttrAddress, PoBox> attr{name, addr, pbox};
+    std::stringstream ss;
+    ss << attr;
+    EXPECT_EQ(ss.str(), "(Name:Joe, Address:Oxford Str, 101010)");
 }
