@@ -11,6 +11,10 @@
 namespace mla::util
 {
 
+// Concept for primitive types
+template <typename T>
+concept Primitive = std::is_arithmetic_v<T>;
+
 template<typename T, typename Tag = void>
 class Attribute
 {
@@ -28,6 +32,32 @@ public:
         if(attr.val.has_value())
             os << *attr.val;
         return os;
+    }
+
+    // For primitive types
+    constexpr T get() const
+        requires Primitive<T>
+    {
+        return val.value_or(T{});
+    }
+
+    // For non-primitive types
+    const T& get() const
+        requires(!Primitive<T>)
+    {
+        static const T default_value{};
+        return val.has_value() ? val.value() : default_value;
+    }
+
+    // Non-const version for non-primitive types
+    constexpr T& get()
+        requires(!Primitive<T>)
+    {
+        if(!val.has_value())
+        {
+            val = T{};
+        }
+        return val.value();
     }
 
 private:

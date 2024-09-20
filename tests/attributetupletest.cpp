@@ -146,3 +146,69 @@ TEST(AttributeTupleTest, PrintAttributeTuple)
     ss << attr;
     EXPECT_EQ(ss.str(), "(Name:Joe, Address:Oxford Str, 101010)");
 }
+
+// Test fixture for Attribute
+class AttributeTest : public ::testing::Test
+{
+protected:
+    Attribute<int> attrInt;
+    Attribute<std::string> attrStr;
+};
+
+TEST_F(AttributeTest, PrimitiveTypeInt)
+{
+    EXPECT_EQ(attrInt.get(), 0);
+}
+
+TEST_F(AttributeTest, NonPrimitiveTypeStringConstAccess)
+{
+    const auto& ref = attrStr.get();
+    EXPECT_EQ(ref, "");
+}
+
+TEST_F(AttributeTest, NonPrimitiveTypeStringModification)
+{
+    auto& ref = attrStr.get();
+    ref = "Hello, World!";
+    EXPECT_EQ(attrStr.get(), "Hello, World!");
+}
+
+TEST_F(AttributeTest, PrimitiveTypeFloat)
+{
+    Attribute<float> attr;
+    EXPECT_FLOAT_EQ(attr.get(), 0.0f);
+}
+
+TEST_F(AttributeTest, PrimitiveTypeDouble)
+{
+    Attribute<double> attr;
+    EXPECT_FLOAT_EQ(attr.get(), 0.0);
+}
+
+TEST_F(AttributeTest, PrimitiveTypeChar)
+{
+    Attribute<char> attr;
+    EXPECT_FLOAT_EQ(attr.get(), char());
+}
+
+TEST_F(AttributeTest, PrimitiveTypeBool)
+{
+    Attribute<bool> attr;
+    EXPECT_FALSE(attr.get());
+}
+
+TEST_F(AttributeTest, NonPrimitiveTypeVectorConstAccess)
+{
+    Attribute<std::vector<int>> attrVec;
+    const auto& ref = attrVec.get();
+    EXPECT_TRUE(ref.empty());
+}
+
+TEST_F(AttributeTest, NonPrimitiveTypeVectorModification)
+{
+    Attribute<std::vector<int>> attrVec;
+    auto& ref = attrVec.get();
+    ref.push_back(42);
+    EXPECT_EQ(attrVec.get().size(), 1);
+    EXPECT_EQ(attrVec.get()[0], 42);
+}
