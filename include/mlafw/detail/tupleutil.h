@@ -10,9 +10,7 @@ namespace detail::util
 
 // Type trait to check if T is in Ts...
 template <typename T, typename... Us>
-struct contains_type : std::disjunction<std::is_same<T, Us>...>
-{
-};
+concept contains_type = (std::same_as<T, Us> || ...);
 
 // Helper to find the index of a type in the tuple
 template <typename T, typename Tuple, std::size_t I = 0>

@@ -20,7 +20,9 @@ class Attribute
 {
 public:
     Attribute() = default;
-    Attribute(T value) : val(std::move(value)) {}
+    Attribute(T value) requires Primitive<T> : val(value) {}
+    Attribute(const T& value) : val(value) {}
+    Attribute(T&& value) : val(std::move(value)) {}
 
     friend std::ostream& operator<<(std::ostream& os, const Attribute& attr)
     {
@@ -95,7 +97,7 @@ public:
     template <typename T>
     std::optional<T> get() const
     {
-        static_assert(detail::util::contains_type<T, Ts...>::value,
+        static_assert(detail::util::contains_type<T, Ts...>,
                       "Type not found in AttributeTuple");
         constexpr std::size_t index =
             detail::util::find_type_index<T, tuple_type>::value;
@@ -106,7 +108,7 @@ public:
     template <typename T>
     void set(const T& value)
     {
-        static_assert(detail::util::contains_type<T, Ts...>::value,
+        static_assert(detail::util::contains_type<T, Ts...>,
                       "Type not found in AttributeTuple");
         constexpr std::size_t index =
             detail::util::find_type_index<T, tuple_type>::value;
@@ -117,7 +119,7 @@ public:
     template <typename T>
     void set(T&& value)
     {
-        static_assert(detail::util::contains_type<T, Ts...>::value,
+        static_assert(detail::util::contains_type<T, Ts...>,
                       "Type not found in AttributeTuple");
         constexpr std::size_t index =
             detail::util::find_type_index<T, tuple_type>::value;
@@ -128,14 +130,14 @@ public:
     template <typename T>
     static constexpr bool contains()
     {
-        return detail::util::contains_type<T, Ts...>::value;
+        return detail::util::contains_type<T, Ts...>;
     }
 
     // Check if a specific type has a value set in the tuple
     template <typename T>
     bool has() const
     {
-        if constexpr(detail::util::contains_type<T, Ts...>::value)
+        if constexpr(detail::util::contains_type<T, Ts...>)
         {
             constexpr std::size_t index =
                 detail::util::find_type_index<T, tuple_type>::value;
