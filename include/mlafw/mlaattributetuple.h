@@ -45,8 +45,8 @@ public:
     const T& get() const
         requires(!Primitive<T>)
     {
-        static const T default_value{};
-        return val.has_value() ? val.value() : default_value;
+        static const T defValue{};
+        return val.value_or(defValue);
     }
 
     // Non-const version for non-primitive types
@@ -54,9 +54,7 @@ public:
         requires(!Primitive<T>)
     {
         if(!val.has_value())
-        {
             val = T{};
-        }
         return val.value();
     }
 
