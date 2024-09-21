@@ -39,6 +39,7 @@ set(TEST_EXECUTABLES
     logtest
     eventthreadtest
     timertest
+    quickmaptest
 )
 
 # Create test targets
@@ -53,7 +54,11 @@ foreach(test_name ${TEST_EXECUTABLES})
 endforeach()
 
 # Benchmarks (not a test, but keeping it here for consistency)
-add_executable(benchmarks benchmark.cpp)
+add_executable(benchmarks
+    #    benchmark.cpp
+    benchmark_quickmap.cpp
+)
+
 target_link_libraries(benchmarks
     mlafw
     benchmark::benchmark

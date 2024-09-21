@@ -1,5 +1,5 @@
-#ifndef __MLA_TIMER_H__
-#define __MLA_TIMER_H__
+#ifndef __MLA_TIMER2_H__
+#define __MLA_TIMER2_H__
 
 #include "mlafw/common.h"
 #include "mlafw/thread.h"
@@ -72,6 +72,8 @@ public:
             {
                 auto event = _queue.top();
                 _queue.pop();
+                lock.unlock();
+
                 event.receiver->timeout(event.id);
             }
             else
@@ -158,3 +160,4 @@ inline bool cancel(timer_id id)
 } // namespace mla::timer
 
 #endif
+
