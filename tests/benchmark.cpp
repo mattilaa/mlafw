@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "mlafw/mlatimer.h"
+#include "mlafw/timer.h"
 
 static void BM_Test(benchmark::State& state)
 {

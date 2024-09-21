@@ -1,10 +1,9 @@
 #ifndef __MLA_TIMER_H__
 #define __MLA_TIMER_H__
 
-#include "mlacommon.h"
-#include "mlafw/mlaeventthread.h"
-#include "mlafw/mlalog.h"
-#include "mlafw/mlathread.h"
+#include "mlafw/common.h"
+#include "mlafw/eventthread.h"
+#include "mlafw/log.h"
 
 #include <chrono>
 #include <condition_variable>

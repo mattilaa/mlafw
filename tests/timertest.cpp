@@ -1,10 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "mlafw/mla.h"
-#include "mlafw/mlaeventthread.h"
-#include "mlafw/mlalog.h"
-#include "mlafw/mlatimer.h"
+#include "mlafw/mlafw.h"
 
 namespace mla {
 

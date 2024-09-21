@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "mlafw/mlaattributetuple.h"
+#include "mlafw/attributetuple.h"
 
 using namespace mla::util;
 

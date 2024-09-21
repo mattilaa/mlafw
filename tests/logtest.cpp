@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "mlafw/mla.h"
+#include "mlafw/mlafw.h"
 
 struct LogThread : mla::thread::Thread
 {

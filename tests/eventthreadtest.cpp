@@ -1,9 +1,6 @@
 #include <gtest/gtest.h>
-#include "mlafw/mla.h"
+#include "mlafw/mlafw.h"
 
-#include <chrono>
-#include <iostream>
-#include <thread>
 #include <variant>
 
 using namespace std::chrono_literals;

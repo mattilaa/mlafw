@@ -1,160 +1,108 @@
-#ifndef __MLA_EVENTTHREAD__
-#define __MLA_EVENTTHREAD__
+#ifndef __MLA_EVENTTHREAD_H__
+#define __MLA_EVENTTHREAD_H__
 
-#include <iostream>
-#include <thread>
-#include <atomic>
+#include "thread.h"
+
+#include "blockingconcurrentqueue.h"
+
 #include <variant>
-#include <optional>
-#include <chrono>
-#include <array>
-#include <memory>
 
-template<typename T, size_t Size>
-class LockFreeQueue {
-private:
-    static_assert((Size & (Size - 1)) == 0, "Size must be a power of 2");
-    static constexpr size_t MASK = Size - 1;
+namespace mla::thread {
 
-    std::array<std::atomic<T*>, Size> buffer;
-    std::atomic<size_t> head{0};
-    std::atomic<size_t> tail{0};
+static constexpr int kDefaultQueueSize = 10000;
 
+template<typename EventType>
+class BlockingEventQueue
+{
 public:
-    LockFreeQueue() {
-        for (auto& slot : buffer) {
-            slot.store(nullptr, std::memory_order_relaxed);
-        }
-    }
+    virtual ~BlockingEventQueue() = default;
 
-    ~LockFreeQueue() {
-        size_t head_pos = head.load(std::memory_order_relaxed);
-        size_t tail_pos = tail.load(std::memory_order_relaxed);
+    virtual void processEvent(const EventType& event) = 0;
 
-        while (head_pos != tail_pos) {
-            T* ptr = buffer[head_pos & MASK].load(std::memory_order_relaxed);
-            delete ptr;
-            head_pos++;
-        }
-    }
+    void push(const EventType& event);
 
-    bool push(const T& value) {
-        T* new_value = new T(value);
-        size_t current_tail = tail.load(std::memory_order_relaxed);
+    void push(EventType&& event);
 
-        while (true) {
-            size_t next_tail = (current_tail + 1) & MASK;
-            if (next_tail == head.load(std::memory_order_acquire)) {
-                delete new_value;
-                return false; // Queue is full
-            }
+    auto isLockFree() -> bool { return _queue.is_lock_free(); }
 
-            if (buffer[current_tail & MASK].load(std::memory_order_relaxed) != nullptr) {
-                current_tail = tail.load(std::memory_order_relaxed);
-                continue;
-            }
+    void eventLoop();
 
-            if (buffer[current_tail & MASK].compare_exchange_weak(
-                    static_cast<T*>(nullptr), new_value,
-                    std::memory_order_release,
-                    std::memory_order_relaxed)) {
-                tail.store(next_tail, std::memory_order_release);
-                return true;
-            }
+    void breakEventLoop();
 
-            current_tail = tail.load(std::memory_order_relaxed);
-        }
-    }
+protected:
+    moodycamel::BlockingConcurrentQueue<
+        EventType,
+        moodycamel::ConcurrentQueueDefaultTraits> _queue {kDefaultQueueSize};
 
-    std::optional<T> pop() {
-        size_t current_head = head.load(std::memory_order_relaxed);
-
-        while (true) {
-            if (current_head == tail.load(std::memory_order_acquire)) {
-                return std::nullopt; // Queue is empty
-            }
-
-            T* value = buffer[current_head & MASK].load(std::memory_order_relaxed);
-            if (value == nullptr) {
-                current_head = head.load(std::memory_order_relaxed);
-                continue;
-            }
-
-            size_t next_head = (current_head + 1) & MASK;
-            if (head.compare_exchange_weak(
-                    current_head, next_head,
-                    std::memory_order_release,
-                    std::memory_order_relaxed)) {
-                T result = *value;
-                delete value;
-                buffer[current_head & MASK].store(nullptr, std::memory_order_relaxed);
-                return result;
-            }
-        }
-    }
+    std::atomic_bool _isRunning{false};
 };
 
-// Event types
-struct QuitEvent {};
-struct PrintEvent { std::string message; };
-struct DelayEvent { std::chrono::milliseconds duration; };
-
-// Event variant
-using Event = std::variant<QuitEvent, PrintEvent, DelayEvent>;
-
-// Event loop class
-class EventLoop {
-private:
-    LockFreeQueue<Event, 1024> queue;
-    std::atomic<bool> running{true};
-    std::thread worker;
-
-    void processEvent(const Event& event) {
-        std::visit([this](const auto& e) { this->handleEvent(e); }, event);
-    }
-
-    void handleEvent(const QuitEvent&) {
-        running.store(false);
-    }
-
-    void handleEvent(const PrintEvent& e) {
-        std::cout << "PrintEvent: " << e.message << std::endl;
-    }
-
-    void handleEvent(const DelayEvent& e) {
-        std::this_thread::sleep_for(e.duration);
-        std::cout << "DelayEvent: Slept for " << e.duration.count() << "ms" << std::endl;
-    }
-
-    void workerFunction() {
-        while (running.load()) {
-            auto event = queue.pop();
-            if (event) {
-                processEvent(*event);
-            } else {
-                std::this_thread::yield();
-            }
-        }
-    }
-
+template <typename Owner, typename EventType>
+class EventThread : public mla::thread::Thread,
+                    public BlockingEventQueue<EventType>
+{
 public:
-    EventLoop() : worker(&EventLoop::workerFunction, this) {}
+    virtual ~EventThread() = default;
 
-    ~EventLoop() {
-        if (running.load()) {
-            stop();
-        }
-        worker.join();
+    void execute() override
+    {
+        BlockingEventQueue<EventType>::eventLoop();
     }
 
-    bool pushEvent(const Event& event) {
-        return queue.push(event);
+    void exit() override
+    {
+        BlockingEventQueue<EventType>::breakEventLoop();
     }
 
-    void stop() {
-        pushEvent(QuitEvent{});
-    }
+    void processEvent(const EventType& event) override;
 };
 
+// BlockingEventQueue implementation
+template<typename EventType>
+void BlockingEventQueue<EventType>::push(const EventType& event)
+{
+    _queue.enqueue(event);
+}
+
+template<typename EventType>
+void BlockingEventQueue<EventType>::push(EventType&& event)
+{
+    _queue.enqueue(std::move(event));
+}
+
+template<typename EventType>
+void BlockingEventQueue<EventType>::eventLoop()
+{
+    _isRunning.store(true);
+
+    while(true)
+    {
+        EventType evt;
+        _queue.wait_dequeue(evt);
+        processEvent(evt);
+
+        [[unlikely]] if(!_isRunning.load())
+            break;
+    }
+}
+
+template<typename EventType>
+void BlockingEventQueue<EventType>::breakEventLoop()
+{
+    _isRunning.store(false);
+
+    // Enqueue a dump object just to make event loop exit.
+    // Queue does not support notify.. Maybe fix this later
+    _queue.enqueue(EventType{});
+}
+
+template<typename Owner, typename EventType>
+void EventThread<Owner, EventType>::processEvent(const EventType& event)
+{
+    auto* owner = static_cast<Owner*>(this);
+    std::visit([&](const auto& e) { owner->onEvent(e); }, event);
+}
+
+} // namespace mla::thread
 
 #endif
