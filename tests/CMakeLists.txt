@@ -1,4 +1,9 @@
 # Fetch googletest
+
+# Disable GoogleTest unit tests
+set(BUILD_GMOCK OFF CACHE BOOL "Builds the googlemock subproject" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "Enable installation of googletest" FORCE)
+
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
@@ -7,6 +12,11 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 # Fetch google benchmark
+
+# Disable Google Benchmark tests
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Disable benchmark testing" FORCE)
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable benchmark gtest testing" FORCE)
+
 FetchContent_Declare(
     benchmark
     GIT_REPOSITORY https://github.com/google/benchmark.git
@@ -23,76 +33,28 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O2")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
-add_executable(tests
-    tests.cpp
-    )
+# Define test executables
+set(TEST_EXECUTABLES
+    attributetupletest
+    logtest
+    eventthreadtest
+    timertest
+)
 
-target_link_libraries(tests
-    mlafw
-    GTest::gtest_main
-    pthread
+# Create test targets
+foreach(test_name ${TEST_EXECUTABLES})
+    add_executable(${test_name} ${test_name}.cpp)
+    target_link_libraries(${test_name}
+        mlafw
+        GTest::gtest_main
+        pthread
     )
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endforeach()
 
-add_executable(utiltest
-    attributetupletest.cpp
-    )
-
-target_link_libraries(utiltest
-    mlafw
-    GTest::gtest_main
-    )
-
-add_executable(logtests
-    logtest.cpp
-    )
-
-target_link_libraries(logtests
-    mlafw
-    GTest::gtest_main
-    pthread
-    )
-
-add_executable(eventthreadtest
-    eventthreadtest.cpp
-    )
-
-target_link_libraries(eventthreadtest
-    mlafw
-    GTest::gtest_main
-    pthread
-    )
-
-add_executable(timertest
-    timertest.cpp
-    )
-
-target_link_libraries(timertest
-    mlafw
-    GTest::gtest_main
-    pthread
-    )
-
-add_executable(benchmarks
-    benchmark.cpp
-    )
-
+# Benchmarks (not a test, but keeping it here for consistency)
+add_executable(benchmarks benchmark.cpp)
 target_link_libraries(benchmarks
     mlafw
     benchmark::benchmark
-    )
-
-add_test(
-  NAME eventtest
-  COMMAND $<TARGET_FILE:eventtest>
-  )
-
-add_test(
-  NAME eventthreadtest
-  COMMAND $<TARGET_FILE:eventthreadtest>
-  )
-
-add_test(
-  NAME timertest
-  COMMAND $<TARGET_FILE:timertest>
-  )
-
+)

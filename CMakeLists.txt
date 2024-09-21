@@ -4,12 +4,15 @@ include(FetchContent)
 
 project(MlaFw
     VERSION 0.1
-    DESCRIPTION "Simple event framework implementation"
+    DESCRIPTION "Simple event framework implementation (header-only)"
     LANGUAGES CXX
     )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
+
+# Enable testing
+enable_testing()
 
 FetchContent_Declare(
     concurrentqueue
@@ -19,5 +22,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(concurrentqueue)
 
-add_subdirectory(src)
+add_subdirectory(include)
 add_subdirectory(tests)
+
+# Add this line to generate test configuration
+include(CTest)
