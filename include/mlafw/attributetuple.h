@@ -100,7 +100,7 @@ public:
         static_assert(detail::util::contains_type<T, Ts...>,
                       "Type not found in AttributeTuple");
         constexpr std::size_t index =
-            detail::util::find_type_index<T, tuple_type>::value;
+            detail::util::find_type_index_v<T, tuple_type>;
         return std::get<index>(data);
     }
 
@@ -111,7 +111,7 @@ public:
         static_assert(detail::util::contains_type<T, Ts...>,
                       "Type not found in AttributeTuple");
         constexpr std::size_t index =
-            detail::util::find_type_index<T, tuple_type>::value;
+            detail::util::find_type_index_v<T, tuple_type>;
         std::get<index>(data) = std::make_optional(value);
     }
 
@@ -122,7 +122,7 @@ public:
         static_assert(detail::util::contains_type<T, Ts...>,
                       "Type not found in AttributeTuple");
         constexpr std::size_t index =
-            detail::util::find_type_index<T, tuple_type>::value;
+            detail::util::find_type_index_v<T, tuple_type>;
         std::get<index>(data) = std::make_optional(std::forward<T>(value));
     }
 
@@ -140,7 +140,7 @@ public:
         if constexpr(detail::util::contains_type<T, Ts...>)
         {
             constexpr std::size_t index =
-                detail::util::find_type_index<T, tuple_type>::value;
+                detail::util::find_type_index_v<T, tuple_type>;
             return std::get<index>(data).has_value();
         }
         return false;

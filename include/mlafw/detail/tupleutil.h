@@ -8,22 +8,40 @@
 namespace detail::util
 {
 
+template<typename T>
+concept TupleType = requires { typename std::tuple_size<T>::type; };
+
+template <typename T, TupleType Tuple>
+class find_type_index
+{
+    template <std::size_t I>
+    static constexpr bool is_same_as_element()
+    {
+        if constexpr(I < std::tuple_size_v<Tuple>)
+        {
+            return std::is_same_v<
+                T, typename std::tuple_element_t<I, Tuple>::value_type>;
+        }
+        return false;
+    }
+
+    template <std::size_t... Is>
+    static constexpr std::size_t find_index(std::index_sequence<Is...>)
+    {
+        return ((is_same_as_element<Is>() ? Is : 0) + ...);
+    }
+
+public:
+    static constexpr std::size_t value =
+        find_index(std::make_index_sequence<std::tuple_size_v<Tuple>>{});
+};
+
+template<typename T, TupleType Tuple>
+inline constexpr std::size_t find_type_index_v = find_type_index<T, Tuple>::value;
+
 // Type trait to check if T is in Ts...
 template <typename T, typename... Us>
 concept contains_type = (std::same_as<T, Us> || ...);
-
-// Helper to find the index of a type in the tuple
-template <typename T, typename Tuple, std::size_t I = 0>
-struct find_type_index
-    : std::conditional_t<
-          I == std::tuple_size_v<Tuple>,
-          std::integral_constant<std::size_t, std::tuple_size_v<Tuple>>,
-          std::conditional_t<std::is_same_v<T, typename std::tuple_element_t<
-                                                   I, Tuple>::value_type>,
-                             std::integral_constant<std::size_t, I>,
-                             find_type_index<T, Tuple, I + 1>>>
-{
-};
 
 // General case for printing other types
 template <typename T>
