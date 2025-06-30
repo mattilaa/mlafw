@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <string_view>
 
@@ -75,7 +76,12 @@ public:
                   1000000;
 
         std::time_t tt = std::chrono::system_clock::to_time_t(now);
-        std::tm tm = *std::localtime(&tt);
+        std::tm tm;
+#ifdef _WIN32
+        localtime_s(&tm, &tt);
+#else
+        localtime_r(&tt, &tm);
+#endif
 
         std::ostringstream oss;
         oss << std::put_time(&tm, "%H:%M:%S") << '.' << std::setfill('0')
@@ -91,6 +97,9 @@ public:
            << (ctx.empty() ? "" : ctx + " ") << msg
            << (use_color ? "\x1b[0m" : "") << "\n";
 
+        static std::mutex log_mutex;
+        std::lock_guard<std::mutex> lock(log_mutex);
+        
         if(level == LogLevel::INFO || level == LogLevel::DEBUG)
             std::cout << ss.str();
         else
