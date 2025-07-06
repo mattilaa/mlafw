@@ -10,8 +10,8 @@ struct LogThread : mla::thread::Thread
         {
             std::stringstream ss;
             ss << "Log entry no: " << i << ", hello from thread id: " << getId();
-            LOG_INFO(log, "str: " << ss.str());
-            LOG_INFO(log, "int " << 6);
+            LOG_INFO(log, "str: {}", ss.str());
+            LOG_INFO(log, "int {}", 6);
         }
     }
 
@@ -41,8 +41,8 @@ TEST(LogTests, InfoLogTestColor)
 TEST(LogTests, LogLevelTests)
 {
     mla::log::StdLogger log {"TestLog", true};
-    LOG_INFO(log, "Hello I'm LOG_INFO: " << 2.3 << ", 😍");
-    LOG_WARNING(log, "Hello I'm LOG_WARNING: " << true<< ", 😱");
+    LOG_INFO(log, "Hello I'm LOG_INFO: {}, 😍", 2.3);
+    LOG_WARNING(log, "Hello I'm LOG_WARNING: {}, 😱", true);
     LOG_ERROR(log, "Hello I'm LOG_ERROR: 😭");
     LOG_DEBUG(log, "Hello I'm LOG_DEBUG: 🦗");
 }

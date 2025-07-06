@@ -179,10 +179,10 @@ TEST(EventThreadTest, MultiThreadStressTest)
     int totalEvents = someEventCounter + someOtherEventCounter;
     EXPECT_EQ(totalEvents, NUM_THREADS * EVENTS_PER_THREAD);
     EXPECT_EQ(totalEvents, totalPushedEvents);
-    LOG_INFO(StdLogger(), "Total events pushed: " << totalPushedEvents);
-    LOG_INFO(StdLogger(), "Total events processed: " << totalEvents);
-    LOG_INFO(StdLogger(), "SomeEvents: " << someEventCounter);
-    LOG_INFO(StdLogger(), "SomeOtherEvents: " << someOtherEventCounter);
+    LOG_INFO(StdLogger(), "Total events pushed: {}", totalPushedEvents.load());
+    LOG_INFO(StdLogger(), "Total events processed: {}", totalEvents);
+    LOG_INFO(StdLogger(), "SomeEvents: {}", someEventCounter.load());
+    LOG_INFO(StdLogger(), "SomeOtherEvents: {}", someOtherEventCounter.load());
 }
 
 TEST(EventThreadTest, InterThreadCommunication)
@@ -271,8 +271,8 @@ TEST(EventThreadTest, InterThreadCommunication)
     int totalEvents = someEventCounter + someOtherEventCounter;
     EXPECT_EQ(totalEvents, NUM_THREADS * EVENTS_PER_THREAD);
     EXPECT_EQ(totalEvents, totalPushedEvents);
-    LOG_INFO(StdLogger(), "Total events pushed: " << totalPushedEvents);
-    LOG_INFO(StdLogger(), "Total events processed: " << totalEvents);
-    LOG_INFO(StdLogger(), "SomeEvents: " << someEventCounter);
-    LOG_INFO(StdLogger(), "SomeOtherEvents: " << someOtherEventCounter);
+    LOG_INFO(StdLogger(), "Total events pushed: {}", totalPushedEvents.load());
+    LOG_INFO(StdLogger(), "Total events processed: {}", totalEvents);
+    LOG_INFO(StdLogger(), "SomeEvents: {}", someEventCounter.load());
+    LOG_INFO(StdLogger(), "SomeOtherEvents: {}", someOtherEventCounter.load());
 }

@@ -2,10 +2,10 @@
 #define __MLA_LOG_H__
 
 #include <chrono>
+#include <format>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
-#include <sstream>
 #include <string_view>
 
 namespace mla::log
@@ -83,27 +83,29 @@ public:
         localtime_r(&tt, &tm);
 #endif
 
-        std::ostringstream oss;
-        oss << std::put_time(&tm, "%H:%M:%S") << '.' << std::setfill('0')
-            << std::setw(6) << ms;
-        return oss.str();
+        return std::format("{:02d}:{:02d}:{:02d}.{:06d}", 
+                          tm.tm_hour, tm.tm_min, tm.tm_sec, ms);
     }
 
     void log(LogLevel level, std::string_view msg)
     {
-        std::ostringstream ss;
-        ss << (use_color ? toColor(level) : "") << level
-           << (use_color ? "\x1b[0m" : "") << " " << timestamp() << " "
-           << (ctx.empty() ? "" : ctx + " ") << msg
-           << (use_color ? "\x1b[0m" : "") << "\n";
+        std::string formatted = std::format("{}{}{} {} {}{}\n",
+            use_color ? toColor(level) : "",
+            static_cast<int>(level) == 0 ? "INFO" : 
+            static_cast<int>(level) == 1 ? "WARNING" :
+            static_cast<int>(level) == 2 ? "ERROR" : "DEBUG",
+            use_color ? "\x1b[0m" : "",
+            timestamp(),
+            ctx.empty() ? std::string(msg) : ctx + " " + std::string(msg),
+            use_color ? "\x1b[0m" : "");
 
         static std::mutex log_mutex;
         std::lock_guard<std::mutex> lock(log_mutex);
         
         if(level == LogLevel::INFO || level == LogLevel::DEBUG)
-            std::cout << ss.str();
+            std::cout << formatted;
         else
-            std::cerr << ss.str();
+            std::cerr << formatted;
     }
 
 private:
@@ -116,33 +118,25 @@ private:
 #define LOG_INFO(logger, ...)                                \
     do                                                       \
     {                                                        \
-        std::ostringstream ss_;                              \
-        ss_ << __VA_ARGS__;                                  \
-        logger.log(mla::log::LogLevel::INFO, ss_.str());     \
+        logger.log(mla::log::LogLevel::INFO, std::format(__VA_ARGS__)); \
     } while(0)
 
 #define LOG_DEBUG(logger, ...)                               \
     do                                                       \
     {                                                        \
-        std::ostringstream ss_;                              \
-        ss_ << __VA_ARGS__;                                  \
-        logger.log(mla::log::LogLevel::DEBUG, ss_.str());    \
+        logger.log(mla::log::LogLevel::DEBUG, std::format(__VA_ARGS__)); \
     } while(0)
 
 #define LOG_WARNING(logger, ...)                             \
     do                                                       \
     {                                                        \
-        std::ostringstream ss_;                              \
-        ss_ << __VA_ARGS__;                                  \
-        logger.log(mla::log::LogLevel::WARNING, ss_.str());  \
+        logger.log(mla::log::LogLevel::WARNING, std::format(__VA_ARGS__)); \
     } while(0)
 
 #define LOG_ERROR(logger, ...)                               \
     do                                                       \
     {                                                        \
-        std::ostringstream ss_;                              \
-        ss_ << __VA_ARGS__;                                  \
-        logger.log(mla::log::LogLevel::ERROR, ss_.str());    \
+        logger.log(mla::log::LogLevel::ERROR, std::format(__VA_ARGS__)); \
     } while(0)
 
 #endif  // __MLA_LOG_H__
